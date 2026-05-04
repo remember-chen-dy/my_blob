@@ -7,6 +7,10 @@ category: Examples
 draft: false
 ---
 
+:::tip
+本文内容由 AI 辅助生成，旨在将零散的知识点整理成体系化的笔记。
+:::
+
 
 
 

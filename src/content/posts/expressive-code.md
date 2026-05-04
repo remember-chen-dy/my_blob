@@ -6,6 +6,11 @@ tags: [Ollama]
 category: 'Ollama'
 draft: false
 ---
+
+:::tip
+本文内容由 AI 辅助生成，旨在将零散的知识点整理成体系化的笔记。
+:::
+
 # 从零开始，用Ollama在本地跑大模型
 
 > 本文详细讲解Ollama的安装、模型下载、对话交互、API调用及私有化部署全过程，包含命令行示例、Modelfile定制、GPU加速配置与常见问题排查，帮助开发者在自己的机器上低成本运行Llama 3、Mistral等开源大模型。
