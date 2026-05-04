@@ -1,22 +1,252 @@
 ---
-title: Draft Example
-published: 2022-07-01
-tags: [Markdown, Blogging, Demo]
-category: Examples
+title: 大模型Prompt提示词工程
+published: 2026-04-01
+tags: [Prompt, Prompt Engineering, langchain]
+description: 本文系统拆解Prompt提示词的基础与进阶用法，从写出清晰指令、设置角色等入门技巧出发，逐步深入到链式思考、思维树、函数调用和结构化输出等高级策略，帮助开发者与创作者彻底释放大语言模型的潜能。
+category: 'Prompt Engineering'
 draft: true
 ---
 
-# This Article is a Draft
+# 大模型提示工程：从基础指令到高阶思维链的全攻略
 
-This article is currently in a draft state and is not published. Therefore, it will not be visible to the general audience. The content is still a work in progress and may require further editing and review.
+> 本文系统拆解Prompt提示词的基础与进阶用法，从写出清晰指令、设置角色等入门技巧出发，逐步深入到链式思考、思维树、函数调用和结构化输出等高级策略，帮助开发者与创作者彻底释放大语言模型的潜能。
 
-When the article is ready for publication, you can update the "draft" field to "false" in the Frontmatter:
+## 1. 引言
 
-```markdown
----
-title: Draft Example
-published: 2024-01-11T04:40:26.381Z
-tags: [Markdown, Blogging, Demo]
-category: Examples
-draft: false
----
+大语言模型（LLM）已经渗透进内容创作、代码开发、数据分析等各个领域，而撬动这些强大能力的那根杠杆，正是“提示词”（Prompt）。很多用户发现，同一个问题换一种问法，模型的表现可以从“胡说八道”飞跃到“专家水准”。这背后并不神秘，而是一套逐渐成熟的技术体系——提示工程（Prompt Engineering）。本文将沿着“基础用法—进阶技巧—实战整合”的路径，带你系统掌握这项21世纪的新硬核技能。
+
+## 2. 基础篇：先把地基打牢
+
+### 2.1 什么是Prompt
+
+Prompt，即提示词，是你提交给大语言模型的一段输入文本。它可以是简单的一句话，也可以是一份带有示例、格式要求和角色设定的长篇指令。模型会基于Prompt生成下一个token，直到完成整个响应。因此，Prompt的质量直接决定了输出的上限。
+
+### 2.2 清晰指令四要素
+
+一个好的基础Prompt至少包含四个要素：
+
+- **任务**：要模型做什么，例如“将以下句子翻译成英文”。
+- **上下文**：必要的背景信息，比如目标受众、领域限定。
+- **角色**：希望模型扮演的专家身份。
+- **输出格式**：期望的结构，如列表、JSON、表格等。
+
+**基础示例（Python调用OpenAI API）**：
+
+```python
+import openai
+
+response = openai.ChatCompletion.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "你是一个专业翻译引擎，只输出译文，不加解释。"},
+        {"role": "user", "content": "将这句话译为英文：'今天天气真好，我们去爬山吧。'"}
+    ],
+    temperature=0.2
+)
+print(response.choices[0].message.content)
+```
+
+输出：  
+`"The weather is really nice today, let's go hiking."`
+
+这里`system`消息充当了角色与输出约束，`user`消息携带具体任务，结构清晰且可复用。
+
+### 2.3 赋予“示例”：少样本学习
+
+在Prompt中添加一两个示例，能极大提升模型遵循格式的准确率，这就是少样本提示（Few-shot Prompting）。
+
+**示例**：将句子转换为“正面/负面”情绪标签。
+
+```
+任务：判断句子情绪，输出“正面”或“负面”。
+示例1：
+句子：我非常喜欢这款产品。
+情绪：正面
+示例2：
+句子：糟糕的体验，再也不买了。
+情绪：负面
+现在请判断：
+句子：还行吧，没有想象中那么差。
+情绪：
+```
+
+模型会很自然地输出“正面”，因为示例建立了明确的映射模式。
+
+### 2.4 角色扮演强化一致性
+
+为模型预设一个充满细节的角色，可以锁定知识领域和语言风格。常用句式：“你是一位拥有20年经验的资深肿瘤科医生，请用通俗语言向患者解释……”或“请扮演一个严谨的Python代码审查员，指出下面代码的潜在问题并给出修正建议。”
+
+角色扮演与system prompt的结合，能够显著减少废话和偏离主题的概率。
+
+## 3. 进阶篇：思维框架与结构化控制
+
+当基础指令无法满足复杂推理、多步决策或精确格式要求时，就需要引入进阶提示工程技巧。这些方法大多围绕“引导模型思考”展开。
+
+### 3.1 链式思考（Chain-of-Thought, CoT）
+
+人类解决复杂数学题、逻辑推理题时，会分步骤推导。CoT提示就是让模型在给出最终答案前，展示推理过程。
+
+**零样本CoT**：在Prompt末尾追加“让我们一步一步思考（Let’s think step by step）”，就能激活模型的逐步推理能力。
+
+**少样本CoT**：提供详细分步解题的示例。
+
+```python
+cot_prompt = """
+Q: 小明有5个苹果，他吃了2个，又买了3个，最后给了朋友1个，他还有几个苹果？
+A: 让我们一步步计算。
+- 初始：5个
+- 吃2个：5 - 2 = 3个
+- 买3个：3 + 3 = 6个
+- 给朋友1个：6 - 1 = 5个
+答案：5个。
+
+Q: 一个水池有两个进水管和一个出水管，A管单独注满需2小时，B管需3小时，出水管放空需4小时。三管同时打开，多久能注满水池？
+A: 让我们一步步计算。
+"""
+# 模型会续写出逐步推理与最终答案
+```
+
+CoT在数学应用题、常识推理、多跳问答中效果拔群，但会增加输出长度与延迟，日常简单任务无需使用。
+
+### 3.2 自我一致性与多数投票
+
+单次CoT可能因为模型采样随机性而给出错误推理。自我一致性（Self-Consistency）的策略是：对同一Prompt，用较高温度（如0.7）采样多条不同的推理路径，然后取出现次数最多的最终答案（多数投票）。这样牺牲部分计算资源，换取显著准确率提升。
+
+**适用场景**：数学竞赛题、逻辑谜题等答案唯一且推理路径多样的问题。
+
+### 3.3 思维树（Tree of Thoughts, ToT）
+
+比CoT更进一步，ToT允许模型在推理的中间步骤生成多个“思维节点”，并自我评估每个节点的前景，进而进行广度或深度搜索。实现上，需要设计专门的Prompt模板，让模型自己产生候选下一步、评估价值、决定回溯或前进。
+
+**简化版ToT示例思路**：
+
+```
+你正在解决一个24点游戏问题，数字是4, 6, 8, 9。
+请生成所有可能的下一步运算（两个数字做加减乘除），并评估每个运算离24有多近。选择最有希望的两个继续推导。
+```
+
+实际上，完整的ToT需要由外部代码循环调度多次LLM调用，已经不是单一Prompt能完成的工作，但其思想源自对Prompt结构的精心设计。
+
+### 3.4 少样本与上下文学习的进阶技巧
+
+- **动态少样本选择**：根据输入问题，从向量数据库中检索最相关的示例，而不是固定示例。这显著提升领域适应能力。
+- **指令微调后的提示**：对于经过指令精调（Instruction Tuning）的模型（如GPT-4、Llama 2-Chat），直接使用“指令 + 输入”的效果往往优于大量示例。
+
+### 3.5 参数调控：温度、Top-P与惩罚
+
+提示工程不仅是编写文本，还涉及解码参数的调优，这是“隐式Prompt”的一部分。
+
+| 参数 | 作用 | 建议场景 |
+|------|------|-----------|
+| `temperature` | 控制随机性，高则发散，低则确定 | 创意写作0.8-1.0；代码/翻译0-0.3 |
+| `top_p` | 核采样，仅从累积概率超p的token中选取 | 与temperature配合，通常0.9 |
+| `frequency_penalty` | 惩罚重复的n-gram，降低复读机效应 | 长文生成时常设0.3-0.5 |
+| `presence_penalty` | 惩罚已经出现过的词，鼓励谈论新话题 | 多主题对话中适度使用 |
+
+**代码示例**：
+
+```python
+response = openai.ChatCompletion.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "写一个关于机器人的悬疑小说开头"}],
+    temperature=0.9,
+    top_p=0.95,
+    frequency_penalty=0.3,
+    presence_penalty=0.2
+)
+```
+
+### 3.6 函数调用与结构化输出
+
+很多时候我们希望模型输出能直接被程序消费，而不是自由文本。OpenAI的函数调用（Function Calling）以及更通用的结构化输出技术，允许模型在产品中稳定地“吐出”JSON。
+
+**函数调用Prompt设计**：
+
+```json
+{
+  "model": "gpt-4-0613",
+  "messages": [
+    {"role": "user", "content": "帮我写一封辞职信，语气礼貌，同时希望保留良好关系。"}
+  ],
+  "functions": [
+    {
+      "name": "generate_letter",
+      "description": "生成正式信件",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "title": {"type": "string"},
+          "body": {"type": "string"},
+          "tone": {"type": "string", "enum": ["formal", "friendly"]}
+        },
+        "required": ["title", "body", "tone"]
+      }
+    }
+  ],
+  "function_call": {"name": "generate_letter"}
+}
+```
+
+模型会返回一个解析好的JSON对象，包含标题、正文、语气。这个功能极大拓展了LLM在自动化流程、软件调用链中的应用。
+
+对于不支持原生函数调用的开源模型，可以通过精心设计的提示模板达到类似效果，例如：
+
+```
+你必须严格用以下JSON格式回复，不要有任何多余文字：
+{
+  "title": "信件标题",
+  "body": "信件正文",
+  "tone": "语气（formal/friendly）"
+}
+```
+
+并搭配后处理正则提取、重试机制，工程化实现稳定输出。
+
+### 3.7 多轮对话与记忆管理
+
+多轮对话中的Prompt需要携带历史信息。一般通过`messages`数组实现，但长度限制和注意力稀释是挑战。
+
+**管理策略**：
+- **滑动窗口**：只保留最近N轮对话。
+- **摘要缓存**：每过几轮，调用模型对历史对话进行摘要，替换掉冗长消息。
+- **分段存储与检索**：将对话块存入向量库，需要时检索相关片段注入Prompt。这是高级RAG（检索增强生成）的变体。
+
+**示例：带摘要的多轮对话框架**：
+
+```python
+def manage_conversation(messages, max_tokens=3000):
+    if token_count(messages) > max_tokens:
+        # 保留最近4条，其余压缩成摘要
+        history = messages[:-4]
+        recent = messages[-4:]
+        summary_prompt = f"将以下对话总结为一段简短的摘要：{history}"
+        summary = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": summary_prompt}]
+        )
+        return [{"role": "system", "content": f"先前对话摘要：{summary}"}] + recent
+    return messages
+```
+
+## 4. 进化对比与实战技巧
+
+为了让进阶价值一目了然，以下表格对比基础与进阶用法的核心差异：
+
+| 维度 | 基础用法 | 进阶用法 |
+|------|-----------|-----------|
+| 指令形式 | 单句自然语言 | 结构化模板 + 思维链 + 示例 |
+| 推理能力 | 直接答案，易出错 | 分步推理、自我验证 |
+| 输出控制 | 通常为自由文本 | JSON/函数调用/强格式约束 |
+| 适应性 | 泛化，不稳定 | 通过参数与搜索算法稳定 |
+| 适用任务 | 翻译、摘要、简单分类 | 复杂推理、多步决策、代码生成 |
+
+**实战黄金法则**：
+1. 从简单开始，逐步叠加技巧，不要一上来就堆砌复杂Prompt。
+2. 为任务设计评估指标，A/B测试不同Prompt变体。
+3. 善用`system`提示词定义全局规则，用`user`提示词携带实例。
+4. 对关键流程加入异常处理：当输出不满足格式时，自动重试或追加“请用正确格式重新回答”的提示。
+5. 保持提示词模块化，将指令、示例、约束分离，方便维护与复用。
+
+## 5. 结语
+
+Prompt提示词从最初的“打字聊天”到如今拥有CoT、ToT、函数调用等系统化方法，已经演变为一门融合认知科学、软件工程与产品设计的综合学科。掌握这些技巧，意味着你能真正驾驭大模型，把它从一个“概率鹦鹉”塑造成可靠、可扩展的智能代理。无论你是开发者、产品经理还是内容创作者，这套从基础到进阶的知识体系都将成为你未来工作流中最锋利的工具。立即动手，改写你的Prompt，见证模型的跃迁吧。
