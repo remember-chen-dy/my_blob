@@ -1,0 +1,15 @@
+---
+import WidgetLayout from "./WidgetLayout.astro";
+import MusicPlayer from "./MusicPlayer.svelte";
+
+interface Props {
+	class?: string;
+	style?: string;
+}
+const className = Astro.props.class;
+const style = Astro.props.style;
+---
+
+<WidgetLayout name="音乐播放器" id="music-player" class={className} style={style}>
+	<MusicPlayer client:only="svelte"></MusicPlayer>
+</WidgetLayout>
