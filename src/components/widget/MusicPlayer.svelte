@@ -65,6 +65,12 @@
 		loadAndPlay();
 	}
 
+	function loadTrack() {
+		if (!audio) return;
+		audio.src = currentTrack.url;
+		audio.load();
+	}
+
 	function loadAndPlay() {
 		if (!audio) return;
 		audio.src = currentTrack.url;
@@ -123,7 +129,7 @@
 	onMount(() => {
 		if (audio) {
 			audio.volume = volume;
-			loadAndPlay();
+			loadTrack();
 		}
 	});
 </script>
@@ -138,6 +144,9 @@
 ></audio>
 
 <div class="w-full">
+	{#if errorMsg}
+		<div class="text-red-500 text-xs mb-2">{errorMsg}</div>
+	{/if}
 
 	<div class="flex items-center gap-3 mb-2">
 		<button
